@@ -23,31 +23,39 @@ def getxyzs(filename):
         xyz.append(vector)
     return np.array(xyz), np.array(xyz_noH), float(lines[1].split(";")[0])
 
-molnames = []
-molxyzs = []
-molxyzs_noH = []
-molenergies = []
-for file in glob.glob("./*xyz"):
-    A, AnoH, ener = getxyzs(file)
-    A -= rmsd.centroid(A)
-    AnoH -= rmsd.centroid(AnoH)
-    molnames.append(file)
-    molxyzs.append(A)
-    molxyzs_noH.append(AnoH)
-    molenergies.append(ener)
-
 loglines = []
-for i in range(len(molxyzs)):
-    for j in range(i+1,len(molxyzs)):
-        U_full = rmsd.kabsch(molxyzs[i], molxyzs[j])
-        Temp_full = np.dot(molxyzs[i], U_full)
-        U_noH = rmsd.kabsch(molxyzs_noH[i], molxyzs_noH[j])
-        Temp_noH = np.dot(molxyzs_noH[i], U_noH)
-        loglines.append("%s,%s,%f,%f,%f" % (molnames[i], molnames[j],
-                                         (molenergies[i]-molenergies[j])*627.5094740,
-                                         rmsd.rmsd(Temp_full, molxyzs[j]),
-                                         rmsd.rmsd(Temp_noH, molxyzs_noH[j])))
+types = []
+mask = "./*xyz"
+for file in glob.glob(mask):
+    file = file.replace("./", "")
+    if file.split("_")[0] not in types:
+        types.append(file.split("_")[0])
 
+for curtype in types:
+    print("Working with " + curtype)
+    molnames = []
+    molxyzs = []
+    molxyzs_noH = []
+    molenergies = []
+    for file in glob.glob("./"+curtype+"_*xyz"):
+        A, AnoH, ener = getxyzs(file)
+        A -= rmsd.centroid(A)
+        AnoH -= rmsd.centroid(AnoH)
+        molnames.append(file)
+        molxyzs.append(A)
+        molxyzs_noH.append(AnoH)
+        molenergies.append(ener)
+
+    for i in range(len(molxyzs)):
+        for j in range(i+1,len(molxyzs)):
+            U_full = rmsd.kabsch(molxyzs[i], molxyzs[j])
+            Temp_full = np.dot(molxyzs[i], U_full)
+            U_noH = rmsd.kabsch(molxyzs_noH[i], molxyzs_noH[j])
+            Temp_noH = np.dot(molxyzs_noH[i], U_noH)
+            loglines.append("%s,%s,%f,%f,%f" % (molnames[i], molnames[j],
+                                             (molenergies[i]-molenergies[j])*627.5094740,
+                                             rmsd.rmsd(Temp_full, molxyzs[j]),
+                                             rmsd.rmsd(Temp_noH, molxyzs_noH[j])))
 
 outfile = open("dataset.csv", "w")
 outfile.write("\n".join(loglines))
